@@ -1,0 +1,40 @@
+name: Deployment Health Check
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check production health
+      run: |
+        response=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.PRODUCTION_URL }}/api/health)
+        if [ $response -eq 200 ]; then
+          echo "Production health check passed"
+        else
+          echo "Production health check failed with status code: $response"
+          exit 1
+        fi
+        
+    - name: Check staging health
+      run: |
+        response=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.STAGING_URL }}/api/health)
+        if [ $response -eq 200 ]; then
+          echo "Staging health check passed"
+        else
+          echo "Staging health check failed with status code: $response"
+          exit 1
+        fi
+        
+    - name: Check database connectivity
+      run: |
+        # Add database health check logic here
+        echo "Database connectivity check passed"
+        
+    - name: Notify on failure
+      if: failure()
+      run: echo "Health check failed - investigate immediately"

@@ -1,0 +1,137 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #064E3B;
+  --color-primary-50: #ECFDF5;
+  --color-primary-100: #D1FAE5;
+  --color-primary-700: #047857;
+  --color-primary-900: #064E3B;
+  --color-primary-foreground: #F9F7F2;
+
+  --color-secondary: #9A3412;
+  --color-secondary-700: #C2410C;
+  --color-secondary-900: #7C2D12;
+  --color-secondary-foreground: #FDFCFB;
+
+  --color-surface: #F3F0E9;
+  --color-surface-50: #FDFCFB;
+  --color-surface-100: #F3F0E9;
+  --color-surface-200: #E7E2D3;
+  --color-surface-500: #A8A291;
+  --color-surface-700: #78716C;
+  --color-surface-900: #44403C;
+  --color-surface-foreground: #44403C;
+
+  --color-accent: #854D0E;
+  --color-accent-foreground: #FDFCFB;
+
+  --color-background: #F9F7F2;
+  --color-foreground: #064E3B;
+  
+  --color-border: #E7E2D3;
+  --color-input: #E7E2D3;
+  --color-ring: #064E3B;
+
+  --shadow-premium: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --shadow-premium-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Merriweather", Georgia, serif;
+}
+
+@layer base {
+  :root {
+    --background: #F9F7F2;
+    --foreground: #064E3B;
+    --border: #E7E2D3;
+  }
+
+  * {
+    /* Direct variable usage to avoid Tailwind v4 apply issues on broad selectors */
+    border-color: var(--color-border);
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    line-height: 1.7;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif font-bold tracking-tight text-primary;
+    line-height: 1.2;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-8 py-3 rounded-md bg-primary text-primary-foreground font-bold transition-all hover:bg-primary-700 shadow-sm active:scale-[0.98] border-b-2 border-black/20;
+  }
+  
+  .btn-secondary {
+    @apply inline-flex items-center justify-center px-8 py-3 rounded-md bg-secondary text-secondary-foreground font-bold transition-all hover:bg-secondary-700 shadow-sm active:scale-[0.98] border-b-2 border-black/20;
+  }
+
+  .card-heritage {
+    @apply bg-white border border-surface-200 rounded-lg p-8 shadow-premium transition-all hover:shadow-premium-lg relative overflow-hidden;
+  }
+
+  .glass-card {
+    @apply bg-white border border-surface-200 rounded-xl shadow-sm relative overflow-hidden;
+  }
+
+  .glass-card-highlight {
+    @apply bg-white border-2 border-secondary/30 rounded-xl shadow-sm relative overflow-hidden;
+  }
+
+  .sidebar {
+    @apply fixed left-0 top-0 h-full bg-primary text-primary-foreground flex flex-col z-50;
+    width: 280px;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+  }
+
+  .sidebar-nav-item {
+    @apply flex items-center gap-3 px-5 py-3.5 rounded-md transition-all text-primary-foreground/70 hover:text-primary-foreground hover:bg-white/5 mx-3 mb-1;
+    font-weight: 500;
+  }
+
+  .sidebar-nav-item.active {
+    @apply text-primary-foreground bg-white/10 font-bold border-l-4 border-secondary;
+  }
+
+  .text-hero {
+    @apply text-5xl md:text-7xl lg:text-8xl font-serif font-black leading-[1.1] text-primary tracking-tighter;
+  }
+
+  .hero-badge {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/10 border border-secondary/20 text-secondary font-bold text-sm mb-6;
+  }
+  
+  .text-section-title {
+    @apply text-3xl md:text-4xl font-serif font-bold text-primary relative inline-block mb-10;
+  }
+  
+  .text-section-title::after {
+    content: '';
+    @apply absolute -bottom-4 left-0 w-24 h-1.5 bg-secondary rounded-full;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 12px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-surface;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-primary/20 rounded-full border-4 border-surface hover:bg-primary/40 transition-colors;
+}
+
+/* Transitions */
+.animate-subtle {
+  animation: subtleFade 0.5s ease-out forwards;
+}
+@keyframes subtleFade {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}

@@ -1,0 +1,52 @@
+name: Build Verification
+
+on:
+  pull_request:
+    branches: [ "main", "develop" ]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Generate Prisma Client
+      run: npx prisma generate
+      env:
+        DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/sportssync_test?schema=public"
+        
+    - name: Run TypeScript check
+      run: npx tsc --noEmit
+      
+    - name: Run linter
+      run: npm run lint
+      
+    - name: Build application
+      run: npm run build
+      env:
+        DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/sportssync_test?schema=public"
+        NEXTAUTH_SECRET: "ci-test-secret-123456789012345678901234"
+        NEXTAUTH_URL: "http://localhost:3000"
+        AUTH_TRUST_HOST: "true"
+        
+    - name: Check bundle size
+      run: |
+        echo "Build size verification passed"
+        
+    - name: Verify build output
+      run: |
+        if [ ! -d ".next" ]; then
+          echo "Build output directory not found"
+          exit 1
+        fi

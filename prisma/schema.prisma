@@ -1,0 +1,695 @@
+// Sports Sync AI — Prisma schema (Production-Ready)
+// Local dev: SQLite (file:./dev.db) | Production: PostgreSQL (see .env.example)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Users ──────────────────────────────────────────────────────────────────
+// role: ATHLETE | ADMIN | GOV_ADMIN | COACH | VENUE_MANAGER | DISTRICT_OFFICER | TOURNAMENT_ORGANIZER
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  role         String    @default("ATHLETE")
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  athlete              Athlete?
+  coach                Coach?
+  venueManager         VenueManager?
+  districtOfficer      DistrictOfficer?
+  notifications        Notification[]
+  auditLogs            AuditLog[]
+  aiReports            AIReport[]
+  announcementsCreated Announcement[]
+  messagesSent         Message[]
+  diviSessions         DiviChatSession[]
+  activityLogs         ActivityLog[]
+
+  @@map("users")
+}
+
+// ─── District Officers ───────────────────────────────────────────────────────
+model DistrictOfficer {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName  String
+  phone     String
+  district  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("district_officers")
+}
+
+// ─── Athletes ────────────────────────────────────────────────────────────────
+model Athlete {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  fullName        String
+  dob             DateTime
+  gender          String
+  phone           String
+  address         String
+  district        String
+  sport           String
+  experienceLevel String
+  aadhaarLastFour String?
+  photoUrl        String?
+  talentScore     Float    @default(0)
+  ranking         Int?
+  isBlacklisted   Boolean  @default(false)
+
+  // Enhanced fields for production
+  stateRanking      Int?
+  nationalRanking   Int?
+  bloodGroup        String?
+  guardianName      String?
+  guardianPhone     String?
+  category          String? // Sport sub-category (e.g., 100m Sprint under Athletics)
+  scholarshipStatus String? // ELIGIBLE | APPLIED | APPROVED | DISBURSED | NONE
+
+  coachId       String?
+  coach         Coach?   @relation(fields: [coachId], references: [id])
+  academyId     String?
+  academy       Academy? @relation(fields: [academyId], references: [id])
+  injuryHistory String?
+  bio           String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  applications       Application[]
+  documents          Document[]
+  results            Result[]
+  performanceRecords PerformanceRecord[]
+  trainingSessions   TrainingSessionAttendance[]
+  coachAssignments   CoachAthleteAssignment[]
+  injuryRecords      InjuryRecord[]
+  matchSlotsHome     Match[]                     @relation("MatchHomeAthlete")
+  matchSlotsAway     Match[]                     @relation("MatchAwayAthlete")
+  scholarships       Scholarship[]
+  certificates       Certificate[]
+
+  @@index([district, sport])
+  @@index([talentScore])
+  @@index([sport, district, talentScore])
+  @@index([stateRanking])
+  @@index([scholarshipStatus])
+  @@map("athletes")
+}
+
+// ─── Coaches ─────────────────────────────────────────────────────────────────
+model Coach {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  fullName        String
+  phone           String
+  specialization  String
+  experienceYears Int     @default(0)
+  certifications  String?
+  bio             String?
+  photoUrl        String?
+
+  // Enhanced fields
+  rating               Float?  @default(0)
+  totalAthletesCoached Int     @default(0)
+  specialNotes         String?
+
+  academyId String?
+  academy   Academy? @relation(fields: [academyId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  athletes         Athlete[]
+  coachAssignments CoachAthleteAssignment[]
+  trainingSessions TrainingSession[]
+
+  @@map("coaches")
+}
+
+model CoachAthleteAssignment {
+  id         String   @id @default(cuid())
+  coachId    String
+  coach      Coach    @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  athleteId  String
+  athlete    Athlete  @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  assignedAt DateTime @default(now())
+  isActive   Boolean  @default(true)
+  notes      String?
+
+  @@unique([coachId, athleteId])
+  @@map("coach_athlete_assignments")
+}
+
+// ─── Academies ────────────────────────────────────────────────────────────────
+model Academy {
+  id           String  @id @default(cuid())
+  name         String
+  district     String
+  sport        String
+  address      String
+  capacity     Int     @default(50)
+  contactEmail String?
+  contactPhone String?
+  logoUrl      String?
+  isActive     Boolean @default(true)
+
+  // Enhanced fields
+  foundedYear         Int?
+  accreditationStatus String? // PENDING | ACCREDITED | SUSPENDED
+  website             String?
+  facilitiesJson      String? // JSON string of facility list
+  headCoachId         String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  coaches  Coach[]
+  athletes Athlete[]
+
+  @@index([district, sport])
+  @@map("academies")
+}
+
+// ─── Tournaments ─────────────────────────────────────────────────────────────
+model Tournament {
+  id                   String    @id @default(cuid())
+  name                 String
+  sport                String
+  category             String
+  ageGroup             String
+  venueId              String
+  venue                Venue     @relation(fields: [venueId], references: [id])
+  startDate            DateTime
+  endDate              DateTime
+  registrationDeadline DateTime?
+  maxParticipants      Int
+  maxTeamSize          Int       @default(1)
+  description          String
+  requiredDocuments    String
+  bracketData          String?
+  prizePool            String?
+  status               String    @default("DRAFT")
+
+  // Enhanced fields
+  archivedAt    DateTime?
+  archiveReason String?
+  budget        Float?
+  sponsoredBy   String?
+  level         String    @default("STATE") // STATE | DISTRICT | NATIONAL | OPEN
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  applications Application[]
+  results      Result[]
+  bookings     Booking[]
+  matches      Match[]
+  certificates Certificate[]
+
+  @@index([status, startDate])
+  @@index([sport, category])
+  @@map("tournaments")
+}
+
+// ─── Matches (fixtures & live scores) ────────────────────────────────────────
+model Match {
+  id           String     @id @default(cuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  round         String
+  matchNumber   Int      @default(1)
+  homeLabel     String?
+  awayLabel     String?
+  homeAthleteId String?
+  homeAthlete   Athlete? @relation("MatchHomeAthlete", fields: [homeAthleteId], references: [id])
+  awayAthleteId String?
+  awayAthlete   Athlete? @relation("MatchAwayAthlete", fields: [awayAthleteId], references: [id])
+
+  scheduledAt DateTime?
+  venue       String?
+  status      String    @default("SCHEDULED") // SCHEDULED | LIVE | COMPLETED | CANCELLED
+  homeScore   Int?
+  awayScore   Int?
+  winnerLabel String?
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tournamentId, status])
+  @@map("matches")
+}
+
+// ─── Applications ─────────────────────────────────────────────────────────────
+model Application {
+  id           String     @id @default(cuid())
+  athleteId    String
+  athlete      Athlete    @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  status       String     @default("PENDING")
+  adminNote    String?
+  appliedAt    DateTime   @default(now())
+  reviewedAt   DateTime?
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([athleteId, tournamentId])
+  @@index([status, appliedAt])
+  @@map("applications")
+}
+
+// ─── Venues ───────────────────────────────────────────────────────────────────
+model Venue {
+  id         String   @id @default(cuid())
+  name       String
+  location   String
+  district   String
+  capacity   Int
+  venueType  String
+  facilities String
+  imageUrl   String?
+  managerId  String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  manager     VenueManager?         @relation(fields: [managerId], references: [id])
+  tournaments Tournament[]
+  bookings    Booking[]
+  maintenance MaintenanceSchedule[]
+
+  @@map("venues")
+}
+
+model VenueManager {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName  String
+  phone     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  venues Venue[]
+
+  @@map("venue_managers")
+}
+
+model Booking {
+  id           String     @id @default(cuid())
+  venueId      String
+  venue        Venue      @relation(fields: [venueId], references: [id])
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id])
+  startDate    DateTime
+  endDate      DateTime
+  status       String     @default("PENDING")
+  note         String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([venueId, startDate, endDate])
+  @@map("bookings")
+}
+
+model Document {
+  id         String   @id @default(cuid())
+  athleteId  String
+  athlete    Athlete  @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  docType    String
+  fileUrl    String
+  fileName   String
+  fileSize   Int
+  isVerified Boolean  @default(false)
+  uploadedAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("documents")
+}
+
+model Result {
+  id                 String     @id @default(cuid())
+  athleteId          String
+  athlete            Athlete    @relation(fields: [athleteId], references: [id])
+  tournamentId       String
+  tournament         Tournament @relation(fields: [tournamentId], references: [id])
+  rank               Int?
+  score              String?
+  medal              String?
+  notes              String?
+  performanceMetrics String?
+  publishedAt        DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  @@map("results")
+}
+
+model PerformanceRecord {
+  id         String   @id @default(cuid())
+  athleteId  String
+  athlete    Athlete  @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  metric     String
+  value      Float
+  unit       String
+  recordedAt DateTime @default(now())
+  recordedBy String?
+  sessionId  String?
+  notes      String?
+
+  @@index([athleteId, recordedAt])
+  @@index([athleteId, metric, recordedAt])
+  @@map("performance_records")
+}
+
+model InjuryRecord {
+  id          String    @id @default(cuid())
+  athleteId   String
+  athlete     Athlete   @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  injuryType  String
+  severity    String    @default("MILD") // MILD | MODERATE | SEVERE
+  description String?
+  occurredAt  DateTime
+  recoveredAt DateTime?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("injury_records")
+}
+
+model TrainingSession {
+  id          String   @id @default(cuid())
+  coachId     String
+  coach       Coach    @relation(fields: [coachId], references: [id])
+  title       String
+  sport       String
+  venue       String?
+  scheduledAt DateTime
+  durationMin Int      @default(90)
+  status      String   @default("SCHEDULED")
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  attendance TrainingSessionAttendance[]
+
+  @@map("training_sessions")
+}
+
+model TrainingSessionAttendance {
+  id        String          @id @default(cuid())
+  sessionId String
+  session   TrainingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  athleteId String
+  athlete   Athlete         @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  attended  Boolean         @default(false)
+  notes     String?
+
+  @@unique([sessionId, athleteId])
+  @@map("training_session_attendance")
+}
+
+// ─── Announcements (government broadcasts) ─────────────────────────────────────
+model Announcement {
+  id          String    @id @default(cuid())
+  title       String
+  message     String
+  scope       String    @default("STATE") // STATE | DISTRICT | SPORT
+  scopeValue  String?
+  priority    String    @default("NORMAL") // LOW | NORMAL | HIGH | URGENT
+  createdById String
+  createdBy   User      @relation(fields: [createdById], references: [id])
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([scope, createdAt])
+  @@map("announcements")
+}
+
+// ─── Messaging ─────────────────────────────────────────────────────────────────
+model Conversation {
+  id        String   @id @default(cuid())
+  subject   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  joinedAt       DateTime     @default(now())
+
+  @@unique([conversationId, userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id])
+  content        String
+  isRead         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+model AIReport {
+  id          String   @id @default(cuid())
+  type        String
+  targetId    String?
+  title       String
+  content     String
+  metadata    String
+  generatedBy String
+  user        User     @relation(fields: [generatedBy], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("ai_reports")
+}
+
+model MaintenanceSchedule {
+  id        String   @id @default(cuid())
+  venueId   String
+  venue     Venue    @relation(fields: [venueId], references: [id])
+  title     String
+  startDate DateTime
+  endDate   DateTime
+  type      String
+  status    String   @default("SCHEDULED")
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("maintenance_schedules")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String   @default("INFO")
+  isRead    Boolean  @default(false)
+  linkUrl   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  actor      User     @relation(fields: [actorId], references: [id])
+  action     String
+  targetType String
+  targetId   String?
+  details    String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([createdAt])
+  @@index([actorId, createdAt])
+  @@index([targetType, targetId])
+  @@map("audit_logs")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// NEW PRODUCTION MODELS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── DIVI AI Chatbot ─────────────────────────────────────────────────────────
+model DiviChatSession {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String   @default("New Conversation")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages DiviChatMessage[]
+
+  @@index([userId, isActive])
+  @@map("divi_chat_sessions")
+}
+
+model DiviChatMessage {
+  id        String          @id @default(cuid())
+  sessionId String
+  session   DiviChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role      String // "user" | "assistant"
+  content   String
+  intent    String? // Classified intent (REGISTRATION, EVENT_INFO, etc.)
+  metadata  String? // JSON: quick actions, suggestions, escalation flag
+  createdAt DateTime        @default(now())
+
+  @@index([sessionId, createdAt])
+  @@map("divi_chat_messages")
+}
+
+// ─── Budget & Finance ────────────────────────────────────────────────────────
+model BudgetAllocation {
+  id          String   @id @default(cuid())
+  fiscalYear  String // "2025-26"
+  sport       String? // null = general allocation
+  district    String? // null = state-level
+  amount      Float
+  spent       Float    @default(0)
+  source      String   @default("STATE_FUND") // STATE_FUND | CENTRAL_GRANT | SAI | KHELO_INDIA | PRIVATE
+  category    String   @default("GENERAL") // GENERAL | INFRASTRUCTURE | TRAINING | EVENTS | EQUIPMENT | SCHOLARSHIPS
+  description String?
+  approvedBy  String?
+  status      String   @default("ALLOCATED") // ALLOCATED | PARTIALLY_SPENT | FULLY_SPENT | FROZEN
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([fiscalYear, sport])
+  @@index([fiscalYear, district])
+  @@map("budget_allocations")
+}
+
+// ─── Scholarships ────────────────────────────────────────────────────────────
+model Scholarship {
+  id          String    @id @default(cuid())
+  athleteId   String
+  athlete     Athlete   @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  schemeName  String // "Khelo India", "SAI Scholarship", "Goa Sports Merit"
+  amount      Float
+  status      String    @default("APPLIED") // APPLIED | UNDER_REVIEW | APPROVED | DISBURSED | REJECTED
+  appliedAt   DateTime  @default(now())
+  approvedAt  DateTime?
+  disbursedAt DateTime?
+  remarks     String?
+  fiscalYear  String
+
+  @@index([athleteId, status])
+  @@index([schemeName, fiscalYear])
+  @@map("scholarships")
+}
+
+// ─── Event Archive (cold storage) ────────────────────────────────────────────
+model EventArchive {
+  id                String   @id @default(cuid())
+  originalId        String // Original tournament ID
+  name              String
+  sport             String
+  category          String
+  level             String
+  venueId           String
+  startDate         DateTime
+  endDate           DateTime
+  totalParticipants Int      @default(0)
+  resultsJson       String? // Serialized results data
+  metadataJson      String? // Full tournament metadata snapshot
+  archiveReason     String   @default("AUTO_ARCHIVE")
+  archivedAt        DateTime @default(now())
+
+  @@index([archivedAt])
+  @@index([sport, level])
+  @@map("event_archives")
+}
+
+// ─── System Configuration ────────────────────────────────────────────────────
+model SystemConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String // JSON string for complex values
+  category  String   @default("GENERAL") // GENERAL | RETENTION | DIVI_FAQ | POLICY
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@map("system_config")
+}
+
+// ─── Activity Logs (lightweight tracking) ────────────────────────────────────
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action    String // PAGE_VIEW | SEARCH | DOWNLOAD | API_CALL
+  resource  String? // e.g., "/athlete/dashboard", "tournament:xyz"
+  metadata  String? // JSON
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+  @@map("activity_logs")
+}
+
+// ─── Digital Certificates ────────────────────────────────────────────────────
+model Certificate {
+  id            String     @id @default(cuid())
+  athleteId     String
+  athlete       Athlete    @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  tournamentId  String
+  tournament    Tournament @relation(fields: [tournamentId], references: [id])
+  type          String     @default("PARTICIPATION") // PARTICIPATION | MERIT | WINNER | SPECIAL
+  title         String
+  description   String?
+  certificateNo String     @unique // e.g., "GOA-SSAI-2025-00001"
+  issuedAt      DateTime   @default(now())
+  issuedBy      String?
+  fileUrl       String?
+  updatedAt     DateTime   @updatedAt
+
+  @@index([athleteId])
+  @@index([tournamentId])
+  @@map("certificates")
+}

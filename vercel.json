@@ -1,0 +1,63 @@
+{
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "regions": ["sin1"],
+  "env": {
+    "DATABASE_URL": "@database-url",
+    "NEXTAUTH_SECRET": "@nextauth-secret",
+    "NEXTAUTH_URL": "@nextauth-url",
+    "AUTH_TRUST_HOST": "true",
+    "AI_PROVIDER": "@ai-provider",
+    "OPENAI_API_KEY": "@openai-api-key",
+    "OPENAI_MODEL": "@openai-model",
+    "GEMINI_API_KEY": "@gemini-api-key",
+    "GEMINI_MODEL": "@gemini-model",
+    "CLOUDINARY_CLOUD_NAME": "@cloudinary-cloud-name",
+    "CLOUDINARY_API_KEY": "@cloudinary-api-key",
+    "CLOUDINARY_API_SECRET": "@cloudinary-api-secret",
+    "CLOUDINARY_UPLOAD_FOLDER": "@cloudinary-upload-folder",
+    "REDIS_URL": "@redis-url",
+    "SENTRY_DSN": "@sentry-dsn",
+    "SENTRY_ENVIRONMENT": "@sentry-environment",
+    "RATE_LIMIT_LOGIN_PER_MIN": "@rate-limit-login-per-min",
+    "RATE_LIMIT_REGISTER_PER_HOUR": "@rate-limit-register-per-hour",
+    "RATE_LIMIT_AI_PER_MIN": "@rate-limit-ai-per-min",
+    "NODE_ENV": "production"
+  },
+  "build": {
+    "env": {
+      "NEXT_PUBLIC_APP_URL": "@next-public-app-url"
+    }
+  },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "/api/:path*"
+    }
+  ]
+}
