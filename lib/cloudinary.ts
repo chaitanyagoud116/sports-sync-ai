@@ -15,7 +15,7 @@ cloudinary.config({
 export { cloudinary };
 
 export async function uploadToCloudinary(
-  file: File | Buffer,
+  file: string,
   folder: string = 'sports-sync-ai',
   resourceType: 'image' | 'raw' = 'raw'
 ): Promise<{ url: string; publicId: string }> {
