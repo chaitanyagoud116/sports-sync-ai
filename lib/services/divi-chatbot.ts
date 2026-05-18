@@ -259,7 +259,7 @@ Rules:
   });
 
   // Update session title based on first message
-  const messageCount = await prisma.diviChatMessage.count({ where: { sessionId } });
+  const totalmessages = await prisma.diviChatMessage.count({ where: { sessionId } });
   let sessionTitle: string | undefined;
   if (messageCount <= 2) {
     sessionTitle = userMessage.slice(0, 60) + (userMessage.length > 60 ? "..." : "");
