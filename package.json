@@ -11,8 +11,7 @@
     "db:studio": "prisma studio",
     "db:up": "docker compose up -d postgres redis",
     "db:down": "docker compose down",
-    "docker:build": "docker build -t sports-sync-ai .",
-    "postinstall": "prisma generate"
+    "docker:build": "docker build -t sports-sync-ai ."
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -25,7 +24,6 @@
     "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-toast": "^1.2.15",
-    "@sentry/nextjs": "^8.0.0",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.0.0",
     "clsx": "^2.1.1",
